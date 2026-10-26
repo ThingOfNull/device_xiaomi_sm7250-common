@@ -45,3 +45,24 @@ mka bacon
 
 See the device tree README for the full device specification and the kernel
 repository README for the kernel build details.
+
+## Status / known issues
+
+Working on the 4.19 kernel (Android 16 / LineageOS 23.2): boot, display
+(DSI/DRM), touch, Wi-Fi, audio, charging, in-display fingerprint, AOD (kernel +
+Settings entry), the four AOSP colour modes and OTA updates.
+
+Known limitations:
+
+- The OTA is signed with the AOSP test keys; re-sign with your own keys before
+  production distribution.
+- Recovery adb is authenticated by default (`ro.adb.secure=1`); authorize it
+  from the recovery UI or rebuild with it disabled if you need unattended adb.
+- LiveDisplay picture-adjustment values are global (per-QDCM-mode storage
+  degrades to mode 0 because the raw mode list is disabled).
+- Colour-mode differences can be subtle on some panels; the framework/HWC
+  state changes are the source of truth.
+- The vendor composer needs the LTM/QDCM XMLs and the patched DPPS blob from
+  this tree; do not replace the vendor image without them.
+- The 5.10 kernel port is experimental and maintained separately; it is not
+  part of this 4.19 release.
