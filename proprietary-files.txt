@@ -158,7 +158,28 @@ vendor/lib64/libsdmextension.so|99377ab065105f0cbd17bbe5907cdbb8027a9f17
 vendor/lib64/libtinyxml2_1.so|fb0a2b16e5cfd28515268edc5c2345190d1ef4e5
 
 # Display (SDM)
+# [2026-10-24] libdpps.so 重新启用（canary 补丁版）。
+# 原版在 DppsFactoryImpSDM::GetLtmXmlParser+1076 的 stack canary 检查处
+# 读取被破坏的 x23(TLS) → fault addr 0x28，composer SIGSEGV。
+# 补丁把 0x9e570 的 "ldr x8,[x23,#0x28]" 改为 "ldur x8,[x29,#-8]"，
+# 绕开被破坏的 TLS 读取；DPPS 线程可正常进入 ppoll server loop。
+# 补丁版 blob: vendor/xiaomi/sm7250-common/proprietary/vendor/lib64/libdpps.so
+# SHA256 f65529a89cf1b987048843b9c4785bd7f954f688fb7518fc242d00423feb1174
+# 原始 blob SHA256 a12cba0dcd99b7e583a83f56888431c81e4212aaab36fa7f15cdcde2806ea647
 vendor/lib64/libdpps.so
+# ————————————————————————————————————————————————————————————————————————
+
+# [vangogh bring-up 2026-04-28] Display calibration XMLs - DPPS/LTM 必需
+# 原 extract-files 没提取到这些 XML，导致 composer-service 在 DppsFactoryImpSDM::
+# GetLtmXmlParser 阶段 null-deref crash，并通过 RescueParty 拖垮 SystemServer 启动。
+# 从 MIUI V13.0.9.0.SJVCNXM factory vendor.img 提取所有 panel 候选，仅 vangogh
+# 实际用到 ltm_config_xiaomi_38_0a_0a_video_mode_fhd_dsi_panel.xml 和对应的
+# qdcm_calib_data_xiaomi_38_0a_0a_video_mode_fhd_dsi_panel.xml，其他 panel 备用。
+#
+# NOTE: libdpps.so 已于 2026-10-24 重新启用（见上方 canary 补丁说明），这些 XML
+# 是 LTM 初始化需要的。
+vendor/etc/ltm_config_xiaomi_38_0a_0a_video_mode_fhd_dsi_panel.xml
+vendor/etc/qdcm_calib_data_xiaomi_38_0a_0a_video_mode_fhd_dsi_panel.xml
 
 # Display postprocessing - from nio
 vendor/bin/hw/vendor.display.color@1.0-service|9c77c3655befc1c53f842e1b9605b83e3dc64259

@@ -191,6 +191,9 @@ persist.log.tag.ContrastColorUtil=S \
 persist.log.tag.OpenGLRenderer=S
 
 # Display
+# ro.vendor.display.ad=1 enables DPPS Assertive Display (outdoor/sunlight
+# readability). Requires the canary-patched libdpps.so noted in
+# proprietary-files.txt.
 PRODUCT_VENDOR_PROPERTIES += \
 persist.sys.sf.color_mode=9 \
 persist.sys.sf.color_saturation=1.0 \
@@ -200,6 +203,7 @@ ro.surface_flinger.max_frame_buffer_acquired_buffers=3 \
 ro.surface_flinger.max_virtual_display_dimension=4096 \
 ro.surface_flinger.protected_contents=true \
 ro.surface_flinger.support_kernel_idle_timer=true \
+ro.vendor.display.ad=1 \
 ro.vendor.display.sensortype=2 \
 vendor.display.comp_mask=0 \
 vendor.display.disable_excl_rect=0 \
@@ -240,11 +244,15 @@ PRODUCT_VENDOR_PROPERTIES += \
 drm.service.enabled=true
 
 # Encryption
+# [vangogh bring-up DEBUG Round-A] 对齐 LineageOS 官方 davinci (SM6150):
+#   ro.crypto.volume.options=::v2  —— 冒号前后留空让 vold 根据 HAL 能力自动协商算法
+#   （原来硬编码成 aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized，
+#    与 fstab 的 fileencryption 行可能冲突，且无法在 HAL 不支持时 fallback）
 PRODUCT_VENDOR_PROPERTIES += \
 ro.crypto.dm_default_key.options_format.version=2 \
 ro.crypto.volume.metadata.method=dm-default-key \
 ro.crypto.volume.filenames_mode=aes-256-cts \
-ro.crypto.volume.options=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized
+ro.crypto.volume.options=::v2
 
 # Fingerprint
 PRODUCT_VENDOR_PROPERTIES += \
@@ -447,6 +455,21 @@ vendor.usb.rmnet.inst.name=rmnet \
 vendor.usb.rndis.func.name=gsi \
 vendor.usb.use_ffs_mtp=1 \
 vendor.usb.use_gadget_hal=1
+
+# Debug build variant (VANGOGH_DEBUG_BUILD=true): early adb, root adb, no RSA
+# authorization, larger logd buffers and faster first boot. These are bring-up
+# aids only and are intentionally excluded from the release build.
+ifeq ($(VANGOGH_DEBUG_BUILD),true)
+PRODUCT_SYSTEM_PROPERTIES += \
+persist.sys.usb.config=mtp,adb \
+ro.adb.secure=0 \
+service.adb.root=1 \
+ro.logd.size=8M \
+pm.dexopt.first-boot=verify \
+pm.dexopt.boot-after-ota=verify \
+pm.dexopt.install=verify \
+pm.dexopt.bg-dexopt=verify
+endif
 
 # Volume steps
 PRODUCT_VENDOR_PROPERTIES += \

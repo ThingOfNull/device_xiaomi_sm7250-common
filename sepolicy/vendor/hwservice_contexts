@@ -18,4 +18,5 @@ vendor.qti.hardware.radio.ims.IImsRadio/imsradio1                          u:obj
 vendor.nxp.nxpese::INxpEse                                          u:object_r:hal_secure_element_hwservice:s0
 
 # VPP
-::vppService                                                        u:object_r:vendor_hal_vpp_hwservice:s0
+# [lineage-23.2 迁移] duplicated in device/qcom/sepolicy_vndr/legacy-um/...
+# ::vppService                                                        u:object_r:vendor_hal_vpp_hwservice:s0

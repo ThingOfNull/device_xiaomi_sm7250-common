@@ -45,7 +45,10 @@ TARGET_BOOTLOADER_BOARD_NAME := lito
 TARGET_NO_BOOTLOADER := true
 
 # Camera
-TARGET_CAMERA_OVERRIDE_FORMAT_FROM_RESERVED := true
+# [lineage-23.2 迁移] TARGET_CAMERA_OVERRIDE_FORMAT_FROM_RESERVED 已被
+# vendor/lineage/config/BoardConfigSoong.mk 强制报错；camera HAL 的 select
+# 分支用 true/default，必须用 _bool 版本。
+$(call soong_config_set_bool,camera,override_format_from_reserved,true)
 TARGET_USES_YCRCB_CAMERA_ENCODE := true
 
 # Display
@@ -61,6 +64,25 @@ endif
 # Display HDR
 TARGET_HAS_HDR_DISPLAY := true
 
+# LiveDisplay
+# sysfs: expose ISunlightEnhancement/default on the dsi-display hbm node.
+# sdm: AIDL successor of the removed vendor.lineage.livedisplay@2.0-service-sdm
+#      HIDL module; provides IPictureAdjustment/IDisplayModes through
+#      libsdm-disp-vndapis.so.
+SOONG_CONFIG_NAMESPACES += livedisplay_sysfs livedisplay_sdm
+SOONG_CONFIG_livedisplay_sysfs := enable_se
+SOONG_CONFIG_livedisplay_sdm := enable_dm enable_pa
+$(call soong_config_set_bool,livedisplay_sysfs,enable_se,true)
+# LiveDisplay DM (IDisplayModes) exposes raw QDCM mode names (enhanced,
+# video1, GM_1, ...) and replaces the AOSP Settings -> Display -> Colors page
+# via settings:replacesKey="color_mode". Those QDCM modes are applied through
+# the legacy disp API side channel, which does not update SurfaceFlinger's
+# color state, so selections are not reliably visible. Keep DM off: the AOSP
+# four color modes (Natural/Boosted/Saturated/Adaptive) remain visible and go
+# through SF/HWC -> SDM. Picture adjustment (PA) is unaffected.
+$(call soong_config_set_bool,livedisplay_sdm,enable_dm,false)
+$(call soong_config_set_bool,livedisplay_sdm,enable_pa,true)
+
 # Filesystem
 TARGET_FS_CONFIG_GEN := $(COMMON_PATH)/config.fs
 
@@ -70,21 +92,32 @@ SOONG_CONFIG_XIAOMI_LITO_FINGERPRINT := FOD
 SOONG_CONFIG_XIAOMI_LITO_FINGERPRINT_FOD ?= false
 ifeq ($(TARGET_HAS_UDFPS),true)
 SOONG_CONFIG_XIAOMI_LITO_FINGERPRINT_FOD := true
-TARGET_SURFACEFLINGER_UDFPS_LIB := //hardware/xiaomi:libudfps_extension.xiaomi
+# [lineage-23.2 迁移] TARGET_SURFACEFLINGER_UDFPS_LIB 已被强制报错；
+# frameworks/native .../Android.bp 的 select 分支用 any @ flag_val / default，
+# 所以用 string 版本的 soong_config_set（非 _bool）。
+$(call soong_config_set,surfaceflinger,udfps_lib,//hardware/xiaomi:libudfps_extension.xiaomi)
 endif
 
 # FM
 BOARD_HAVE_QCOM_FM := true
 
 # HIDL
+# [lineage-23.2 迁移] vendor/lineage/config/device_framework_matrix.xml 在
+# lineage-23.2 base 里已不存在，改用本地 lineage_framework_matrix.xml
+# （内容由 patch 11 基于 vendor/lineage 老版本提取）。
 DEVICE_FRAMEWORK_COMPATIBILITY_MATRIX_FILE += \
     $(COMMON_PATH)/framework_compatibility_matrix.xml \
-    vendor/lineage/config/device_framework_matrix.xml
+    $(COMMON_PATH)/lineage_framework_matrix.xml
 DEVICE_MATRIX_FILE += $(COMMON_PATH)/compatibility_matrix.xml
 DEVICE_MANIFEST_FILE += $(COMMON_PATH)/manifest.xml
 
 # Init
-TARGET_INIT_VENDOR_LIB ?= //$(COMMON_PATH):init_xiaomi_lito
+# [lineage-23.2 迁移] TARGET_INIT_VENDOR_LIB 已被强制报错。
+# system/core/init/Android.bp 的 select 用 any @ flag_val / default，用 string 版本。
+# 注意：device 层（vangogh / monet）自己的 BoardConfig.mk 会用同样的 namespace 覆盖
+# 成自己的 init_xiaomi_<device>，所以 common 这里只给个回退用途的默认值是没必要的
+# （Soong namespace 后设优先）。照 monet 写法，common 不再提供默认。
+# 下面这行保留给 recovery 模块使用，不影响 Soong。
 TARGET_RECOVERY_DEVICE_MODULES ?= init_xiaomi_lito
 
 # Kernel
@@ -97,6 +130,28 @@ BOARD_INCLUDE_DTB_IN_BOOTIMG := true
 BOARD_BOOT_HEADER_VERSION := 2
 BOARD_MKBOOTIMG_ARGS += --header_version $(BOARD_BOOT_HEADER_VERSION)
 
+# ----------------------------------------------------------------------------
+# Kernel cmdline. Keep it short: the vangogh LK bootloader passes only the
+# first 512 bytes (BOOT_ARGS_SIZE) of the boot-header v2 main cmdline to the
+# kernel; extra_cmdline is not forwarded. Extra RCU/WiFi parameters belong in
+# lito.dtsi chosen.bootargs, which is not truncated.
+# ----------------------------------------------------------------------------
+
+# ramoops: xiaomi/qcom private early_param, 1MB reserved for pstore crash logs
+BOARD_KERNEL_CMDLINE += ramoops_memreserve=0x100000
+# panic=5: reboot 5 seconds after a kernel panic
+BOARD_KERNEL_CMDLINE += panic=5
+
+# Debug build variant (VANGOGH_DEBUG_BUILD=true): permissive SELinux and
+# verbose init logging, for bring-up only. The release build stays enforcing.
+ifeq ($(VANGOGH_DEBUG_BUILD),true)
+BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive androidboot.init_log_severity=debug
+endif
+
+# === Board parameters ===
+# NOTE: androidboot.hardware=qcom is required by init to load init.qcom.rc.
+# NOTE: androidboot.init_fatal_reboot_target=recovery keeps fatal init errors
+#       recoverable (reboot to recovery instead of bootloader).
 BOARD_KERNEL_CMDLINE += androidboot.console=ttyMSM0
 BOARD_KERNEL_CMDLINE += androidboot.fstab_suffix=qcom
 BOARD_KERNEL_CMDLINE += androidboot.hardware=qcom
@@ -107,14 +162,13 @@ BOARD_KERNEL_CMDLINE += cgroup.memory=nokmem,nosocket
 BOARD_KERNEL_CMDLINE += kpti=off
 BOARD_KERNEL_CMDLINE += lpm_levels.sleep_disabled=1
 BOARD_KERNEL_CMDLINE += msm_rtb.filter=0x237
-BOARD_KERNEL_CMDLINE += reboot=panic_warm
 BOARD_KERNEL_CMDLINE += service_locator.enable=1
 BOARD_KERNEL_CMDLINE += swiotlb=2048 loop.max_part=7
 
 KERNEL_SUPPORTS_LLVM_TOOLS := true
 TARGET_KERNEL_ADDITIONAL_FLAGS := HOSTCFLAGS="-fuse-ld=lld -Wno-unused-command-line-argument" LLVM_IAS=1
 TARGET_KERNEL_CLANG_COMPILE := true
-TARGET_KERNEL_CONFIG := milito_defconfig vendor/debugfs.config
+TARGET_KERNEL_CONFIG := vangogh_419_defconfig
 TARGET_KERNEL_CROSS_COMPILE_PREFIX := aarch64-linux-gnu-
 TARGET_KERNEL_LLVM_BINUTILS := true
 TARGET_KERNEL_SOURCE := kernel/xiaomi/sm7250
@@ -124,7 +178,10 @@ KERNEL_CC := CC=clang
 override KERNEL_TOOLCHAIN_PREFIX_arm := arm-linux-android-
 
 # Lineage Health
-TARGET_HEALTH_CHARGING_CONTROL_SUPPORTS_BYPASS := false
+# [lineage-23.2 迁移] TARGET_HEALTH_CHARGING_CONTROL_SUPPORTS_BYPASS 已被强制报错。
+# hardware/lineage/interfaces/health/aidl/default/Android.bp 的 select 分支为
+# true/false/default，必须用 _bool 版本。
+$(call soong_config_set_bool,lineage_health,charging_control_supports_bypass,false)
 
 # Media
 TARGET_USES_ION := true
@@ -192,6 +249,7 @@ BOARD_VENDOR_SEPOLICY_DIRS += $(COMMON_PATH)/sepolicy/vendor
 # Verified Boot
 BOARD_AVB_ENABLE := true
 BOARD_AVB_MAKE_VBMETA_IMAGE_ARGS += --flags 3
+BOARD_AVB_MAKE_VBMETA_SYSTEM_IMAGE_ARGS += --flags 3
 BOARD_AVB_VBMETA_SYSTEM := system system_ext product
 BOARD_AVB_VBMETA_SYSTEM_KEY_PATH := external/avb/test/data/testkey_rsa4096.pem
 BOARD_AVB_VBMETA_SYSTEM_ALGORITHM := SHA256_RSA4096

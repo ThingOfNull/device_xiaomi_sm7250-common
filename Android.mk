@@ -41,14 +41,23 @@ $(CNE_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
 
 ALL_DEFAULT_INSTALLED_MODULES += $(CNE_SYMLINKS)
 
-WIFI_FIRMWARE_SYMLINKS := $(TARGET_OUT_VENDOR)/firmware/wlan/qca_cld
-$(WIFI_FIRMWARE_SYMLINKS): $(LOCAL_INSTALLED_MODULE)
-	@echo "Creating wifi firmware symlinks: $@"
-	@mkdir -p $@
-	$(hide) ln -sf /vendor/etc/wifi/WCNSS_qcom_cfg.ini $@/WCNSS_qcom_cfg.ini
-	$(hide) ln -sf /mnt/vendor/persist/wlan_mac.bin $@/wlan_mac.bin
+# Keep the individual symlink paths in ALL_DEFAULT_INSTALLED_MODULES (not just
+# the parent directory): the vendor image is built with a file-list filter,
+# and only listed paths are copied by e2fsdroid. Listing the directory alone
+# silently drops the symlinks from vendor.img.
+WIFI_CFG_SYMLINK := $(TARGET_OUT_VENDOR)/firmware/wlan/qca_cld/WCNSS_qcom_cfg.ini
+$(WIFI_CFG_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+	@echo "Creating wifi firmware symlink: $@"
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf /vendor/etc/wifi/WCNSS_qcom_cfg.ini $@
 
-ALL_DEFAULT_INSTALLED_MODULES += $(WIFI_FIRMWARE_SYMLINKS)
+WIFI_MAC_SYMLINK := $(TARGET_OUT_VENDOR)/firmware/wlan/qca_cld/wlan_mac.bin
+$(WIFI_MAC_SYMLINK): $(LOCAL_INSTALLED_MODULE)
+	@echo "Creating wifi firmware symlink: $@"
+	@mkdir -p $(dir $@)
+	$(hide) ln -sf /mnt/vendor/persist/wlan_mac.bin $@
+
+ALL_DEFAULT_INSTALLED_MODULES += $(WIFI_CFG_SYMLINK) $(WIFI_MAC_SYMLINK)
 
 EGL_32_SYMLINK := $(TARGET_OUT_VENDOR)/lib/libEGL_adreno.so
 $(EGL_32_SYMLINK): $(LOCAL_INSTALLED_MODULE)

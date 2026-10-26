@@ -4,6 +4,8 @@ type fingerprint_device, dev_type;
 
 type hall_device, dev_type;
 
-type lirc_device, dev_type;
+# [lineage-23.2 迁移] lirc_device 已在 device/lineage/sepolicy/common/vendor/device.te
+# 被统一定义，这里去掉重复声明避免 'Duplicate declaration of type' 错误。
+# type lirc_device, dev_type;
 
 type sound_device, dev_type;

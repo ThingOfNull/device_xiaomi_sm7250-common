@@ -20,3 +20,16 @@ bluetooth.profile.pbap.server.enabled=true
 bluetooth.profile.sap.server.enabled=true
 bluetooth.profile.tbs.server.enabled=true
 bluetooth.profile.vc.server.enabled=true
+
+# eBPF kernel version override
+# vangogh kernel is 4.19.325 but Android 16 (25Q2+) NetBpfLoad requires
+# kernel >= 5.4. Xiaomi has backported enough BPF features from
+# android12-5.4 that we can lie about the kernel version here and
+# the BPF programs still load successfully.
+# Reference: LineageOS/android_device_xiaomi_sm6150-common
+#   commit 2a5950e "sm6150-common: Override kernel BPF version"
+#   commit b412532 "sm6150-common: Bump kernel BPF version override to 5.4.299"
+# Without this, netbpfload returns exit code 6 on kernel <5.4, and init
+# triggers "reboot_on_failure reboot,bpfloader-failed" -> bootloop, which
+# on the surface looks like "init_user0_failed" in recovery.
+ro.bpf.kver_override=5.4.299

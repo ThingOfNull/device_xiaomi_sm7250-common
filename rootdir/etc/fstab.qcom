@@ -41,7 +41,18 @@ product                                                 /product               e
 vendor                                                  /vendor                ext4    ro,barrier=1,discard                                 wait,avb=vbmeta,logical,first_stage_mount
 odm                                                     /odm                   ext4    ro,barrier=1,discard                                 wait,avb,logical,first_stage_mount
 /dev/block/by-name/metadata                             /metadata              ext4    noatime,nosuid,nodev,discard,data=journal,commit=1   wait,check,formattable,first_stage_mount,metadata_csum
-/dev/block/bootdevice/by-name/userdata                  /data                  f2fs    noatime,nosuid,nodev,discard,reserve_root=32768,resgid=1065,fsync_mode=nobarrier,inlinecrypt    latemount,wait,check,formattable,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized,keydirectory=/metadata/vold/metadata_encryption,quota,reservedsize=128M,sysfs_path=/sys/devices/platform/soc/1d84000.ufshc,checkpoint=fs,fscompress
+# [vangogh bring-up DEBUG Round-B] /data 加密参数（关键修正！）
+# 证据链：
+#   - vangogh vendor 只有 android.hardware.keymaster@4.0-service-qti
+#   - keymaster @4.0 HAL 不支持 Tag::STORAGE_KEY（那是 @4.1 才加的 tag）
+#   - 所以 wrappedkey_v0 在 vangogh 上不工作！
+#   - 对比：davinci (SM6150) vendor 是 @4.1，才能用 wrappedkey_v0
+# 
+# 修正方案：保留 metadata encryption + FBE，但不用 wrappedkey_v0
+#   - fileencryption=...v2+inlinecrypt_optimized  (去掉 +wrappedkey_v0)
+#   - metadata_encryption=aes-256-xts   (不带 :wrappedkey_v0)
+#   - 这样 keystore2 会用 raw AES key + keymaster @4.0 包裹，完全 @4.0 兼容
+/dev/block/bootdevice/by-name/userdata                  /data                  f2fs    noatime,nosuid,nodev,discard,reserve_root=32768,resgid=1065,fsync_mode=nobarrier,inlinecrypt    latemount,wait,check,formattable,fileencryption=aes-256-xts:aes-256-cts:v2+inlinecrypt_optimized,metadata_encryption=aes-256-xts,keydirectory=/metadata/vold/metadata_encryption,quota,reservedsize=128M,sysfs_path=/sys/devices/platform/soc/1d84000.ufshc,checkpoint=fs
 /dev/block/bootdevice/by-name/cache                     /cache                 ext4    nosuid,noatime,nodev,barrier=1                       wait
 /dev/block/bootdevice/by-name/persist                   /mnt/vendor/persist    ext4    noatime,nosuid,nodev,barrier=1                       wait
 /dev/block/bootdevice/by-name/boot                      /boot                  emmc    defaults                                             defaults

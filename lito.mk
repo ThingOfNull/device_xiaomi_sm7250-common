@@ -61,7 +61,10 @@ PRODUCT_PACKAGES += \
     android.hardware.soundtrigger@2.3-impl \
     android.hardware.soundtrigger@2.2-impl \
     android.hardware.soundtrigger@2.1-impl \
-    android.hardware.soundtrigger@2.0-impl 
+    android.hardware.soundtrigger@2.0-impl
+
+PRODUCT_PACKAGES += \
+    libaudioroute-v34
 
 PRODUCT_PACKAGES += \
     audio.bluetooth.default \
@@ -163,6 +166,10 @@ PRODUCT_PACKAGES += \
     disable_configstore
 
 # Consumer IR
+# [vangogh bring-up] 2026-04-28 已补全 consumerir.default.so（从 MIUI V13.0.9.0.SJVCNXM
+# factory vendor.img 提取到 proprietary/vendor/lib64/hw/consumerir.default.so）。
+# @1.0-service 上电后不再 crash, RescueParty 不再触发。
+# 如果再次移除，注意同步 manifest.xml 中 android.hardware.ir 的 <hal> 声明。
 PRODUCT_PACKAGES += \
     android.hardware.ir@1.0-impl \
     android.hardware.ir@1.0-service
@@ -304,8 +311,13 @@ PRODUCT_PACKAGES += \
     android.hardware.light-service.lineage
 
 # LiveDisplay
+# The old vendor.lineage.livedisplay@2.0-service-sdm HIDL module was removed
+# upstream. Its AIDL successor is vendor.lineage.livedisplay-service.sdm
+# (IPictureAdjustment/IDisplayModes via libsdm-disp-vndapis.so).
+# The sysfs service provides ISunlightEnhancement via the kernel hbm node.
 PRODUCT_PACKAGES += \
-    vendor.lineage.livedisplay@2.0-service-sdm
+    vendor.lineage.livedisplay-service.sdm \
+    vendor.lineage.livedisplay-service.sysfs
 
 # Lineage Health
 PRODUCT_PACKAGES += \
@@ -490,9 +502,10 @@ PRODUCT_PACKAGES += \
     libpiex_shim
 
 # Soong namespaces
+# [lineage-23.2 迁移] bootable/deprecated-ota 在 lineage-23.2 base 里没有 Android.bp，
+# 它不再是一个 Soong namespace，从这里移除。
 PRODUCT_SOONG_NAMESPACES += \
     $(LOCAL_PATH) \
-    bootable/deprecated-ota \
     hardware/xiaomi
 
 # Telephony
@@ -553,6 +566,10 @@ $(call inherit-product, vendor/qcom/opensource/vibrator/vibrator-vendor-product.
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/vibrator/excluded-input-devices.xml:$(TARGET_COPY_OUT_VENDOR)/etc/excluded-input-devices.xml
+
+# IDC (Input Device Configuration)
+PRODUCT_COPY_FILES += \
+    $(LOCAL_PATH)/idc/fts_ts.idc:$(TARGET_COPY_OUT_VENDOR)/usr/idc/fts_ts.idc
 
 # VNDK
 PRODUCT_PACKAGES += \

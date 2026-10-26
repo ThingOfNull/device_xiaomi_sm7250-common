@@ -1,3 +1,9 @@
 
-allow hal_secure_element_default hal_nfc_default:binder { call };
-allow hal_secure_element_default hal_nfc_service:binder { call };
+# [lineage-23.2 迁移] 这两条 allow 违反 Android 16 的 sepolicy neverallow
+# （system/sepolicy/private/domain.te:2223 禁止 vendor → framework binder call）：
+#
+#   allow hal_secure_element_default hal_nfc_default:binder { call };
+#   allow hal_secure_element_default hal_nfc_service:binder { call };
+#
+# 暂时移除，若 secure_element 功能缺失再通过 AIDL HAL 之间标准的 binder 调用链
+# 重新启用（而不是直接 allow 跨 domain call）。

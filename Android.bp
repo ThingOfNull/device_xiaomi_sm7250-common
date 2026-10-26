@@ -1,5 +1,4 @@
+// [lineage-23.2 迁移] bootable/deprecated-ota 在 lineage-23.2 base 里没有 Android.bp
+// （目录存在但不再是 Soong namespace），去掉这个 import 避免 soong bootstrap 失败。
 soong_namespace {
-    imports: [
-        "bootable/deprecated-ota",
-    ],
 }

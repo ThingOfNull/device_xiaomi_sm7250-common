@@ -78,6 +78,10 @@ on post-fs
 on early-boot
     # set RLIMIT_MEMLOCK to 64MB
     setrlimit 8 67108864 67108864
+    # [vangogh bring-up] 启用 service_locator（PDR 框架必需）
+    # BOARD_KERNEL_CMDLINE 中的 service_locator.enable=1 在 Android 16 boot header
+    # 中未生效。必须在 ADSP 启动前通过 sysfs 激活，否则 Audio PD 无法创建。
+    write /sys/module/service_locator/parameters/enable 1
     # Allow subsystem (modem etc) debugging
     write /sys/kernel/boot_adsp/boot 1
     write /sys/kernel/boot_cdsp/boot 1
