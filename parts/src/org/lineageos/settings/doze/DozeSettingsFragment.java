@@ -24,6 +24,8 @@ import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.widget.CompoundButton;
@@ -80,6 +82,14 @@ public class DozeSettingsFragment extends PreferenceFragment implements
         PreferenceCategory proximitySensorCategory = (PreferenceCategory) getPreferenceScreen().
                 findPreference(DozeUtils.CATEG_PROX_SENSOR);
 
+        SensorManager sensorManager = getActivity().getSystemService(SensorManager.class);
+        final boolean hasPickupSensor = sensorManager != null &&
+                DozeUtils.getSensor(sensorManager, "xiaomi.sensor.pickup") != null;
+        final boolean hasProximitySensor = sensorManager != null &&
+                sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null;
+        final boolean proxCheckBeforePulse = hasProximitySensor &&
+                DozeUtils.getProxCheckBeforePulse(getActivity());
+
         mPickUpPreference = (SwitchPreference) findPreference(DozeUtils.GESTURE_PICK_UP_KEY);
         mPickUpPreference.setEnabled(dozeEnabled);
         mPickUpPreference.setOnPreferenceChangeListener(this);
@@ -92,8 +102,11 @@ public class DozeSettingsFragment extends PreferenceFragment implements
         mPocketPreference.setEnabled(dozeEnabled);
         mPocketPreference.setOnPreferenceChangeListener(this);
 
-        // Hide proximity sensor related features if the device doesn't support them
-        if (!DozeUtils.getProxCheckBeforePulse(getActivity())) {
+        // Hide sensor related features the device cannot provide
+        if (!hasPickupSensor && pickupSensorCategory != null) {
+            getPreferenceScreen().removePreference(pickupSensorCategory);
+        }
+        if (!proxCheckBeforePulse && proximitySensorCategory != null) {
             getPreferenceScreen().removePreference(proximitySensorCategory);
         }
 
@@ -102,8 +115,12 @@ public class DozeSettingsFragment extends PreferenceFragment implements
             getPreferenceScreen().removePreference(mAlwaysOnDisplayPreference);
         } else {
             mWakeOnGesturePreference.setDependency(DozeUtils.ALWAYS_ON_DISPLAY);
-            pickupSensorCategory.setDependency(DozeUtils.ALWAYS_ON_DISPLAY);
-            proximitySensorCategory.setDependency(DozeUtils.ALWAYS_ON_DISPLAY);
+            if (hasPickupSensor && pickupSensorCategory != null) {
+                pickupSensorCategory.setDependency(DozeUtils.ALWAYS_ON_DISPLAY);
+            }
+            if (proxCheckBeforePulse && proximitySensorCategory != null) {
+                proximitySensorCategory.setDependency(DozeUtils.ALWAYS_ON_DISPLAY);
+            }
         }
     }
 
@@ -136,7 +153,7 @@ public class DozeSettingsFragment extends PreferenceFragment implements
         mPocketPreference.setEnabled(isChecked);
     }
 
-    private static class HelpDialogFragment extends DialogFragment {
+    public static class HelpDialogFragment extends DialogFragment {
         @Override
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             return new AlertDialog.Builder(getActivity())

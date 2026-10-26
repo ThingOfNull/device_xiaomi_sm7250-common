@@ -20,6 +20,7 @@ package org.lineageos.settings.doze;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.hardware.display.AmbientDisplayConfiguration;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
@@ -76,8 +77,13 @@ public final class DozeUtils {
             Context con = context.createPackageContext("com.android.systemui", 0);
             int id = con.getResources().getIdentifier("doze_proximity_check_before_pulse",
                     "bool", "com.android.systemui");
+            if (id == 0) {
+                Log.w(TAG, "doze_proximity_check_before_pulse not found in SystemUI");
+                return false;
+            }
             return con.getResources().getBoolean(id);
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (PackageManager.NameNotFoundException | Resources.NotFoundException e) {
+            Log.w(TAG, "Unable to read doze_proximity_check_before_pulse", e);
             return false;
         }
     }

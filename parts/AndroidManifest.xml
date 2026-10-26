@@ -52,11 +52,16 @@
             android:exported="true"
             android:permission="ThermalService" />
 
+        <!-- Doze/AOD settings. Enabled so that Settings' external ambient
+             display entry (ambient_display_external_settings and
+             doze_device_settings) can resolve this action and open the page.
+             Exported so the start never depends on caller UID; the activity
+             takes no input extras and only exposes user-driven doze toggles. -->
         <activity
             android:name=".doze.DozeSettingsActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/ambient_display_title"
-            android:enabled="false">
+            android:enabled="true">
             <intent-filter>
                 <action android:name="org.lineageos.settings.device.DOZE_SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
